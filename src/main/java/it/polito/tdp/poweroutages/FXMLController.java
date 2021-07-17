@@ -5,9 +5,11 @@
 package it.polito.tdp.poweroutages;
 
 import java.net.URL;
+import java.util.List;
 import java.util.ResourceBundle;
 import it.polito.tdp.poweroutages.model.Model;
 import it.polito.tdp.poweroutages.model.Nerc;
+import it.polito.tdp.poweroutages.model.PowerOutages;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.ComboBox;
@@ -39,6 +41,37 @@ public class FXMLController {
     @FXML
     void doRun(ActionEvent event) {
     	txtResult.clear();
+    	
+    	try {
+    		Nerc selectedNerc = cmbNerc.getSelectionModel().getSelectedItem();
+    		if(selectedNerc == null) {
+    			txtResult.setText("Select a Nerc (area identifier)");
+    			return;
+    		}
+    		
+    		int maxY = Integer.parseInt(txtYears.getText());
+    		int yearListSize = model.getYearList().size();
+    		if(maxY<=0 || maxY>yearListSize) {
+    			txtResult.setText("Select a number of years in range [1, "+yearListSize+"]");
+    			return;
+    		}
+    		int maxH = Integer.parseInt(txtHours.getText());
+    		if(maxH<=0) {
+    			txtResult.setText("Select a number of hours greater than zero");
+    			return;
+    		}
+    		txtResult.setText(String.format("Computing the worst case analysis... for %d hours and %d years", maxH, maxY));
+    		List<PowerOutages> worstCase = model.getWorstCase(maxY, maxH, selectedNerc);
+    		txtResult.clear();
+    		txtResult.appendText("Tot people affected: "+model.sumAffectedPeople(worstCase)+"\n");
+    		txtResult.appendText("Int hours of outage: "+model.sumOutageHours(worstCase)+"\n");
+    		for(PowerOutages ee : worstCase) {
+    			txtResult.appendText(String.format("%d %s %s %d %d", ee.getYear(), ee.getOutageStart(), ee.getOutageEnd(), ee.getOutageDuration(), ee.getAffectedPeople()));
+    			txtResult.appendText("\n");
+    		}
+    	}catch(NumberFormatException e) {
+    		txtResult.setText("insert a valid number of years and/or hours\n");
+    	}
     }
 
     @FXML // This method is called by the FXMLLoader when initialization is complete
@@ -54,5 +87,7 @@ public class FXMLController {
     
     public void setModel(Model model) {
     	this.model = model;
+    	List<Nerc> nercList = model.getNercList();
+    	cmbNerc.getItems().addAll(nercList);
     }
 }
